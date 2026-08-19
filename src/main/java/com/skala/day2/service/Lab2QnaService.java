@@ -1,8 +1,14 @@
 package com.skala.day2.service;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.ResponseEntity;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
@@ -10,15 +16,20 @@ import com.skala.day2.domain.AnswerDto;
 import com.skala.day2.domain.Chunk;
 
 /**
- * TODO: Step 2~3 — 검색과 답변 (교안 p.223–224)
- *
- * <p>이 프로젝트는 <b>직접 조립형</b>으로 통일한다 — {@code QuestionAnswerAdvisor} 같은 어드바이저는
- * 확장 과제("어드바이저 전환")를 고를 때만 쓴다. 참고: `02_lab-guide.md` Step 2·3 코드 예시,
- * 강사 샘플 `08_위키QnA/WikiRag.java`의 {@code 찾기()}·{@code 묻기()}(단, 아래 두 가지는 그대로
- * 베끼지 않는다 — ①거절 지시 없이 프롬프트에 사용자 입력을 직접 이어 붙임 ②컨트롤러 직접 호출).
+ * Step 2~3 — 검색과 답변 (교안 p.223–224). 직접 조립형으로 통일한다 — {@code similaritySearch} →
+ * 근거 포맷팅 → 수동 프롬프트 → {@code .entity(AnswerDto.class)}.
  */
 @Service
 public class Lab2QnaService {
+
+    private static final int ASK_TOP_K = 4;
+    // 실측(text-embedding-3-small, 섹션 단위 청크 재조정 후): golden.json 10문항 기준 정답 청크는
+    // 최저 0.22~0.25대에서도 나오는데, 무관한 질문("우주 배송")의 최고 오탐 점수는 0.45로 오히려
+    // 더 높다 — "배송"이라는 단어 자체가 겹쳐서 벡터 유사도만으로는 절대 분리되지 않는다.
+    // threshold는 완전 무관한(점수 자체가 바닥인) 질문만 거르는 1차 방어선으로 낮게 두고, 진짜 거절은
+    // 시스템 프롬프트("근거에 없으면 확인되지 않습니다")의 grounded 판단에 맡긴다.
+    private static final double SIMILARITY_THRESHOLD = 0.2;
+    private static final int SNIPPET_LENGTH = 120;
 
     private final VectorStore vectorStore;
     private final ChatClient answerChat;
@@ -28,40 +39,76 @@ public class Lab2QnaService {
         this.answerChat = answerChatClient;
     }
 
-    /**
-     * TODO: Step 2 — 검색만 (교안 p.223). 답변보다 먼저 만든다.
-     *
-     * <ol>
-     *   <li>{@code vectorStore.similaritySearch(SearchRequest.builder().query(q).topK(topK)
-     *       .similarityThreshold(0.5).build())}로 검색한다.</li>
-     *   <li>결과를 {@link Chunk}(source, score, snippet 120자)로 매핑해 그대로 돌려준다 — 점수를
-     *       감추지 않는다. "검색 결과를 눈으로 봤는가?"가 RAG 디버깅의 시작이다(01_study-guide.md §29).</li>
-     * </ol>
-     *
-     * <p>세 질문으로 검증한다: ①"반품 기한" → return-policy 상위 ②"물건 돌려보내려면 며칠 안에?" →
-     * 표현이 달라도 같은 문서를 찾는가 ③"우주 배송" → 점수가 전부 낮아 근거 없음으로 보이는가.
-     */
+    /** Step 2 — 검색만 (교안 p.223). 점수를 감추지 않고 그대로 돌려준다. */
     public List<Chunk> retrieve(String question, int topK) {
-        throw new UnsupportedOperationException(
-                "TODO: Step 2 — 교안 p.223. similaritySearch로 top-k 근거를 찾아 점수와 함께 돌려준다.");
+        return search(question, topK).stream()
+                .map(doc -> new Chunk(sourceOf(doc), scoreOf(doc), snippetOf(doc)))
+                .toList();
     }
 
     /**
-     * TODO: Step 3 — 근거로 답하기 (교안 p.224).
-     *
-     * <ol>
-     *   <li>{@link #retrieve}로 근거를 찾는다. <b>비어 있으면 모델을 부르지 않고 {@link AnswerDto#unknown()}을
-     *       반환한다</b> — 완료 기준 4번(거절), 오늘의 진짜 학습 지점(p.229).</li>
-     *   <li>근거가 있으면 {@code answerChat.prompt().user(u -> u.text("[근거]\n{context}\n\n[질문]
-     *       {question}").param("context", ...).param("question", question)).call().entity(AnswerDto.class)}
-     *       로 구조화 출력을 받는다. ⚠️ 사용자 입력을 문자열에 직접 이어 붙이지 않는다 — {@code {placeholder}}
-     *       + {@code .param()} 바인딩(03_agent-context.md 하드 규칙).</li>
-     *   <li>{@code finishReason=length}(응답 잘림)를 정상 응답으로 취급해 그대로 반환하지 않는다 —
-     *       Day 1 `OrderSummaryService.callModel()`의 처리 방식을 참고한다.</li>
-     * </ol>
+     * Step 3 — 근거로 답하기 (교안 p.224). 근거가 비면 모델을 부르지 않고 거절한다(완료 기준 4번).
      */
     public AnswerDto ask(String question) {
-        throw new UnsupportedOperationException(
-                "TODO: Step 3 — 교안 p.224. 근거가 없으면 모델을 부르지 않고 unknown()을 반환한다.");
+        List<Document> evidence = search(question, ASK_TOP_K);
+        if (evidence.isEmpty()) {
+            return AnswerDto.unknown();
+        }
+
+        String context = evidence.stream()
+                .map(doc -> "출처: %s%n%s".formatted(sourceOf(doc), doc.getText()))
+                .collect(Collectors.joining("\n\n"));
+
+        ResponseEntity<ChatResponse, AnswerDto> response = answerChat.prompt()
+                .user(u -> u.text("[근거]\n{context}\n\n[질문] {question}")
+                        .param("context", context)
+                        .param("question", question))
+                .call()
+                .responseEntity(AnswerDto.class);
+
+        ChatResponse chatResponse = response.response();
+        if (chatResponse != null && chatResponse.hasFinishReasons(Set.of("LENGTH"))) {
+            // 잘린 응답(finishReason=length)을 정상 응답으로 취급하지 않는다 —
+            // Lab2ExceptionHandler가 503으로 안전하게 처리한다. maxTokens를 늘리는 게 근본 해법이다.
+            throw new IllegalStateException("답변이 최대 토큰 길이에서 잘렸습니다(finishReason=length).");
+        }
+
+        AnswerDto answer = response.entity();
+        return answer != null ? sanitizeSources(answer) : AnswerDto.unknown();
+    }
+
+    private List<Document> search(String question, int topK) {
+        return vectorStore.similaritySearch(SearchRequest.builder()
+                .query(question)
+                .topK(topK)
+                .similarityThreshold(SIMILARITY_THRESHOLD)
+                .build());
+    }
+
+    private String sourceOf(Document doc) {
+        Object source = doc.getMetadata().get("source");
+        return source != null ? source.toString() : "unknown";
+    }
+
+    private double scoreOf(Document doc) {
+        Double score = doc.getScore();
+        return score != null ? score : 0.0;
+    }
+
+    private String snippetOf(Document doc) {
+        String text = doc.getText();
+        if (text == null) {
+            return "";
+        }
+        return text.length() <= SNIPPET_LENGTH ? text : text.substring(0, SNIPPET_LENGTH);
+    }
+
+    /** 모델이 근거 포맷("출처: 파일명")의 접두어·대괄호를 그대로 베껴 오는 경우를 방어적으로 정리한다. */
+    private AnswerDto sanitizeSources(AnswerDto answer) {
+        List<String> cleaned = answer.sources().stream()
+                .map(s -> s.replaceAll("^\\[|\\]$", "").replaceFirst("^출처:\\s*", "").trim())
+                .filter(s -> !s.isEmpty())
+                .toList();
+        return new AnswerDto(answer.answer(), cleaned, answer.grounded());
     }
 }
