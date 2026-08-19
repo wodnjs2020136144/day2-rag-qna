@@ -15,6 +15,22 @@ spring:
     # temperature·maxTokens는 여기에 전역으로 두지 않는다 — 용도별 ChatClient 빈(Lab2AiConfig)에
     # 고정한다. 호출부마다 다르게 부르면 그날부터 답변이 매번 달라진다 (03_agent-context.md 하드 규칙).
 
+lab2:
+  rag:
+    # 실측(docs/session-log-2026-08-19.md 3-1절): 이 실습 문서는 각 ~100토큰이라 교안 기본값
+    # (400/200)으로는 문서당 청크 1개로 뭉쳐 "검색"이 사실상 "문서 단위 비교"가 된다. 섹션 단위로
+    # 쪼개려고 120/80으로 낮췄다. Step 5 실험표(A~F)를 재려면 이 값들을
+    # -Dlab2.rag.chunk-size=... 같은 시스템 프로퍼티로 덮어쓴다(scripts/step5-experiment.sh 참고).
+    chunk-size: 120
+    min-chunk-size-chars: 80
+    overlap-ratio: 0.0
+    top-k: 4
+    # 실측(3-2절): 청크를 쪼갠 뒤에도 정답 최저 점수(~0.22)와 무관 질문("우주 배송") 최고 오탐
+    # 점수(0.45)가 겹쳐 threshold만으로는 정답/오답을 분리할 수 없다. 여기서는 점수가 완전히
+    # 바닥인 질문만 거르는 1차 방어선으로 낮게 두고, 진짜 거절은 시스템 프롬프트(Lab2AiConfig)의
+    # grounded 판단(2차 방어선)에 맡긴다.
+    similarity-threshold: 0.2
+
 server:
   port: 8080
 
