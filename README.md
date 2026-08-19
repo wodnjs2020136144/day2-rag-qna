@@ -51,10 +51,13 @@ Swagger UI — <http://localhost:8080/swagger-ui.html>
 차이는 확장 과제에서만 만든다.
 
 ```
-main                     ← 이 스캐폴드 · lab2-docs · golden.json (공통 기준자)
-├─ impl/<github-id-A>    ← A: Step 1~5 완주 + 확장 과제 ①
-└─ impl/<github-id-B>    ← B: Step 1~5 완주 + 확장 과제 ②
+main                             ← 이 스캐폴드 · lab2-docs · golden.json (공통 기준자)
+├─ hwangjaewon/day2-rag-qna      ← 황재원: Step 1~5 완주 + 확장 과제 ①
+└─ parksungwoo/day2-rag-qna      ← 박성우: Step 1~5 완주 + 확장 과제 ②
 ```
+
+브랜치명은 `<github-id>/<repo-name>` 형태다 — GitHub Flow에서 개인 소유 브랜치에 흔히 쓰는 패턴이고,
+`git branch -a`만 봐도 누가 작업 중인지 바로 드러난다.
 
 **규칙**
 
