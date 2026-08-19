@@ -1,32 +1,20 @@
 package com.skala.day2.service;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.ai.document.Document;
+import org.springframework.ai.reader.TextReader;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
 import com.skala.day2.domain.IngestResult;
 
-/**
- * TODO: Step 1 — 인제스트 (교안 p.222)
- *
- * <p>읽기 → 분할 → 메타데이터 → 저장 순서로 구현한다. 참고: 교안 lab-guide
- * `02_lab-guide.md`의 "Step 1 — 인제스트" 코드 예시, 강사 샘플 `08_위키QnA/WikiRag.java`의 {@code 넣기()}.
- *
- * <p>채울 것:
- * <ol>
- *   <li>{@code src/main/resources/lab2-docs/*.md}를 전부 읽는다
- *       ({@code PathMatchingResourcePatternResolver}로 classpath 패턴 검색, 08_위키QnA 참고)</li>
- *   <li>{@code TokenTextSplitter.builder().withChunkSize(400).withMinChunkSizeChars(200).build()}로
- *       분할한다. ⚠️ {@code new TokenTextSplitter()} 생성자는 쓰지 않는다 — deprecated다.
- *       Step 5 실험표(청크 200/400/800)를 채우려면 builder여야 파라미터를 바꿀 수 있다.</li>
- *   <li>{@code source}(파일명)·{@code version} 메타데이터를 이 시점에 반드시 넣는다 — 나중엔 못 넣는다.
- *       출처 표기(완료 기준 3번)가 여기서 시작한다.</li>
- *   <li>같은 {@code source}를 {@code FilterExpressionBuilder().eq("source", ...)}로 지운 뒤 다시
- *       넣는다(재색인). 두 번 인제스트해도 조각 수가 늘지 않아야 정상이다 — 완료 기준 8번,
- *       "오늘의 진짜 학습 지점" 중 하나(p.229).</li>
- * </ol>
- */
 @Service
 public class Lab2IngestService {
 
@@ -36,9 +24,58 @@ public class Lab2IngestService {
         this.vectorStore = vectorStore;
     }
 
-    /** lab2-docs 아래 문서를 전부 (재)인제스트하고 문서별 결과를 돌려준다. */
     public List<IngestResult> ingestAll() {
-        throw new UnsupportedOperationException(
-                "TODO: Step 1 — 교안 p.222. lab2-docs/*.md를 읽어 분할·메타데이터·재색인 후 저장한다.");
+
+        try {
+            // 1. lab2-docs 아래의 모든 md 문서를 찾는다.
+            var resolver = new PathMatchingResourcePatternResolver();
+            Resource[] resources = resolver.getResources("classpath*:lab2-docs/*.md");
+
+            // 2. 문서를 400 토큰 기준으로 분할한다.
+            var splitter = TokenTextSplitter.builder()
+                    .withChunkSize(400)
+                    .withMinChunkSizeChars(200)
+                    .build();
+
+            List<IngestResult> results = new ArrayList<>();
+
+            for (Resource resource : resources) {
+
+                String source = resource.getFilename();
+
+                if (source == null) {
+                    continue;
+                }
+
+                // 3. 파일을 Document로 읽고 메타데이터를 넣는다.
+                TextReader reader = new TextReader(resource);
+                reader.getCustomMetadata().put("source", source);
+                reader.getCustomMetadata().put("version", "v1");
+
+                List<Document> documents = reader.get();
+
+                // 4. Document를 여러 chunk로 분할한다.
+                List<Document> chunks = splitter.apply(documents);
+
+                // 5. 같은 source가 이미 있으면 먼저 삭제한다.
+                var filter = new FilterExpressionBuilder()
+                        .eq("source", source)
+                        .build();
+
+                vectorStore.delete(filter);
+
+                // 6. 새 chunk를 VectorStore에 저장한다.
+                vectorStore.add(chunks);
+
+                // 7. 파일별 chunk 개수를 결과에 기록한다.
+                results.add(new IngestResult(source, chunks.size()));
+            }
+
+            return results;
+
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "lab2-docs 문서를 읽는 중 오류가 발생했습니다.", e);
+        }
     }
 }
