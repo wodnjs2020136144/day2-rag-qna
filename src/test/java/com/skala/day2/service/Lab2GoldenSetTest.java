@@ -3,6 +3,7 @@ package com.skala.day2.service;
 import java.io.IOException;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,16 @@ class Lab2GoldenSetTest {
 
     @Autowired
     private Lab2QnaService qnaService;
+
+    @Autowired
+    private Lab2IngestService ingestService;
+
+    // 이 테스트는 @SpringBootTest 자체 컨텍스트에서 뜬 별도의 인메모리 VectorStore를 쓴다 —
+    // bootRun으로 띄운 서버에 인제스트해 둔 데이터와는 무관하다. 매번 새로 채워야 근거가 잡힌다.
+    @BeforeEach
+    void 인제스트() {
+        ingestService.ingestAll();
+    }
 
     @Test
     void 골든_세트_평가() throws IOException {
