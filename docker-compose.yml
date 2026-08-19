@@ -1,0 +1,29 @@
+# 확장 과제 "pgvector 전환" 전용이다 — 기본 실습 경로(Step 1~5)는 SimpleVectorStore(인메모리)로
+# 완주하며 이 파일을 쓰지 않는다. 재시작해도 인제스트한 문서가 남는지 확인하고 싶을 때만 띄운다.
+#
+#   docker compose up -d
+#
+# 전환 시 application.yml에 아래를 추가하고 Lab2VectorStoreConfig의 SimpleVectorStore 빈을 뺀다.
+#   spring:
+#     ai:
+#       vectorstore:
+#         pgvector:
+#           initialize-schema: true
+#           index-type: HNSW
+#           distance-type: COSINE_DISTANCE
+#           dimensions: 1536   # text-embedding-3-small 차원과 반드시 일치
+# 그리고 build.gradle에 'org.springframework.ai:spring-ai-starter-vector-store-pgvector'를 추가한다.
+services:
+  pgvector:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: ragdb
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector-data:/var/lib/postgresql/data
+
+volumes:
+  pgvector-data:

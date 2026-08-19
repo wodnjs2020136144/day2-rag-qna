@@ -1,0 +1,15 @@
+{
+  // F5 로 실행·디버그한다. 키는 여기(실행 설정)에 두면 소스에 커밋되지 않는다.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Day 2 메인 실습 · 사내 문서 Q&A",
+      "request": "launch",
+      "mainClass": "com.skala.day2.Day2Application",
+      "projectName": "사내문서QnA_메인실습",
+      "vmArgs": "-Dfile.encoding=UTF-8",
+      "env": { "OPENAI_API_KEY": "${env:OPENAI_API_KEY}" }
+    }
+  ]
+}

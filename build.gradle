@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.skala'
+version = '1.0.0'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+// 편집기·OS 가 달라도 한글 주석·프롬프트가 깨지지 않게 인코딩을 고정한다.
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.withType(Test).configureEach { systemProperty 'file.encoding', 'UTF-8' }
+tasks.named('bootRun') { jvmArgs = ['-Dfile.encoding=UTF-8'] }
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'   // Swagger UI
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Boot 4 부터 @WebMvcTest(org.springframework.boot.webmvc.test.autoconfigure) 는
+    // spring-boot-starter-test 가 아니라 이 신규 스타터가 있어야 딸려온다.
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+
+    // ===============================
+    // Spring AI BOM
+    // ===============================
+    implementation platform(
+        "org.springframework.ai:spring-ai-bom:2.0.0"
+    )
+
+    // ===============================
+    // Spring AI + OpenAI
+    // ===============================
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
+    // ===============================
+    // RAG — 인메모리 VectorStore(SimpleVectorStore). 청킹(TokenTextSplitter)·문서 읽기(TextReader)는
+    // spring-ai-commons에 있어 이 의존성만으로 전이 포함된다. 08_위키QnA(강사 샘플, spring-ai 1.1.8)와
+    // 좌표명은 같지만(spring-ai-vector-store), 실제 컴파일로 2.0.0 BOM에서도 해결됨을 확인했다.
+    // ===============================
+    implementation 'org.springframework.ai:spring-ai-vector-store'
+
+    // ===============================
+    // 확장 과제 "어드바이저 전환"용 — QuestionAnswerAdvisor.
+    // ⚠️ 강사 샘플 어디에도 없는 좌표라 이름을 추측하면 틀리기 쉽다 — 실제 컴파일로 확정했다.
+    // 2.0.0 BOM에서는 spring-ai-advisors-vector-store가 아니라 spring-ai-vector-store-advisor다.
+    // 메인 실습(직접 조립형)에는 필요 없다. 확장 과제를 고르지 않으면 이 의존성을 빼도 된다.
+    // ===============================
+    implementation 'org.springframework.ai:spring-ai-vector-store-advisor'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    // 골든 세트 평가 테스트(Lab2GoldenSetTest)는 실제 모델을 호출한다 — 기본 테스트에서는 제외하고
+    // `./gradlew test -Peval` 로 켠다 (교안 p.225 "모델을 부르므로 기본 테스트에서는 제외한다").
+    if (!project.hasProperty('eval')) {
+        exclude '**/Lab2GoldenSetTest.class'
+    }
+}

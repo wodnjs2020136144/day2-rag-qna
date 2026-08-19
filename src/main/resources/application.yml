@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: 사내문서QnA_메인실습
+
+  ai:
+    openai:
+      # 키는 소스에 넣지 않는다.  export OPENAI_API_KEY="sk-..."
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+      embedding:
+        options:
+          model: text-embedding-3-small
+    # temperature·maxTokens는 여기에 전역으로 두지 않는다 — 용도별 ChatClient 빈(Lab2AiConfig)에
+    # 고정한다. 호출부마다 다르게 부르면 그날부터 답변이 매번 달라진다 (03_agent-context.md 하드 규칙).
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    doc-expansion: none
+
+logging:
+  level:
+    com.skala: DEBUG
