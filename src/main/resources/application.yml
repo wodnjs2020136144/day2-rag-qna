@@ -26,3 +26,14 @@ springdoc:
 logging:
   level:
     com.skala: DEBUG
+
+# Day 2 Step 5 실험값.
+# 환경변수로 한 값만 바꿔 같은 golden.json을 다시 실행한다.
+# 예: LAB2_CHUNK_SIZE=200 ./gradlew test -Peval --rerun-tasks
+lab2:
+  rag:
+    chunk-size: ${LAB2_CHUNK_SIZE:400}
+    min-chunk-size-chars: ${LAB2_MIN_CHUNK_SIZE_CHARS:200}
+    chunk-overlap-percent: ${LAB2_CHUNK_OVERLAP_PERCENT:0}
+    answer-top-k: ${LAB2_TOP_K:4}
+    similarity-threshold: ${LAB2_THRESHOLD:0.0}
