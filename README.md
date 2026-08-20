@@ -45,10 +45,26 @@ Swagger UI — <http://localhost:8080/swagger-ui.html>
 
 ---
 
+## 진행 현황
+
+이 실습은 세 사람이 **머지하지 않는 개별 브랜치**에서 각자 Step 1~5를 진행하는 방식으로 이뤄졌다 —
+경쟁이 아니라 같은 조건에서 각자 배우기 위한 구성이다(아래 "협업 구조" 참고). main에는 스캐폴드
+(이 문서·`lab2-docs`·`golden.json`)만 있고, 실제 구현과 실습 기록은 각자의 브랜치에 있다.
+
+| 브랜치 | 진행 내용 |
+|---|---|
+| [`hwangjaewon/day2-rag-qna`](https://github.com/wodnjs2020136144/day2-rag-qna/tree/hwangjaewon/day2-rag-qna) | Step 1~5 완주. [결과보고서](https://github.com/wodnjs2020136144/day2-rag-qna/blob/hwangjaewon/day2-rag-qna/docs/결과보고서.md)에 완료 기준 8개, 골든셋 9/10, A~G 실험표를 정리했고, 세 사람의 실행 화면과 회고도 함께 모아 뒀다(인쇄용 `결과보고서.html`·`결과보고서.pdf` 포함). |
+| [`parksungwoo/day2-rag-qna`](https://github.com/wodnjs2020136144/day2-rag-qna/tree/parksungwoo/day2-rag-qna) | Step 1~5 완주(청크 겹침을 `OverlapTokenTextSplitter`로 직접 구현). [결과보고서](https://github.com/wodnjs2020136144/day2-rag-qna/blob/parksungwoo/day2-rag-qna/docs/결과보고서.md)에 구현·실험 설계를 정리했고, 실행 화면으로 A~D·F 10/10, E 1/10을 확인했다. |
+| [`lyoungah-kim/day2-rag-qna`](https://github.com/wodnjs2020136144/day2-rag-qna/tree/lyoungah-kim/day2-rag-qna) | Step 1~3 구현(골든셋 10/10). Step 5 A~F 실험 해석과 회고는 hwangjaewon 브랜치의 결과보고서에 함께 실려 있다. |
+
+아래 "협업 구조" 규칙 4번("완주 후 다른 두 사람의 브랜치를 재현해 본다")은 아직 진행되지 않았다.
+
+---
+
 ## 협업 구조 — 경쟁이 아니라 "같은 조건, 다른 확장"
 
-채점이 없는 실습이라 **코드를 합치지 않는다.** 대신 세 사람이 같은 조건으로 각자 완주하고,
-차이는 확장 과제에서만 만든다.
+채점이 없는 실습이라 **코드를 합치지 않는다.** 대신 세 사람이 같은 조건으로 각자 완주했고,
+차이는 확장 과제에서만 만들기로 했다.
 
 ```
 main                             ← 이 스캐폴드 · lab2-docs · golden.json (공통 기준자)
