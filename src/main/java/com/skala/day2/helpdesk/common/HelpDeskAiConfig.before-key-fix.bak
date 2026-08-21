@@ -1,0 +1,65 @@
+package com.skala.day2.helpdesk.common;
+
+import java.util.List;
+
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.SafeGuardAdvisor;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import com.skala.day2.lab3.advisor.TokenMeterAdvisor;
+
+@Configuration
+public class HelpDeskAiConfig {
+
+    @Bean("helpDeskClient")
+    public ChatClient helpDeskClient(
+            ChatClient.Builder builder,
+            @Qualifier("lab3ChatMemory") ChatMemory chatMemory,
+            TokenMeterAdvisor tokenMeter) {
+
+        return builder
+                .defaultSystem("""
+                        너는 사내 업무를 지원하는 HelpDesk AI다.
+
+                        이 서비스에는 SEMICONDUCTOR와 FINANCE 두 상담 도메인이 있다.
+
+                        [공통 원칙]
+                        - 실시간 업무 데이터는 반드시 제공된 Tool을 사용해서 확인한다.
+                        - Tool이 반환하지 않은 실시간 상태를 추측하지 않는다.
+                        - 사용자가 접근할 수 없는 데이터는 제공하지 않는다.
+                        - 개인정보와 민감정보를 출력하지 않는다.
+                        - 근거가 없는 내용은 만들어내지 않는다.
+                        - 답변은 한국어로 간결하고 명확하게 한다.
+
+                        [SEMICONDUCTOR]
+                        - 장비 상태, 온도, 공정 라인, 담당 엔지니어 질문은 장비 Tool을 사용한다.
+
+                        [FINANCE]
+                        - 거래 상태, 금액, 승인 상태 질문은 거래 Tool을 사용한다.
+                        """)
+                .defaultAdvisors(
+                        tokenMeter,
+
+                        SafeGuardAdvisor.builder()
+                                .sensitiveWords(List.of(
+                                        "주민등록번호",
+                                        "카드번호",
+                                        "비밀번호"))
+                                .failureResponse(
+                                        "죄송합니다. 민감정보가 포함된 요청은 처리할 수 없습니다.")
+                                .order(100)
+                                .build(),
+
+                        MessageChatMemoryAdvisor.builder(chatMemory)
+                                .order(200)
+                                .build(),
+
+                        new SimpleLoggerAdvisor())
+                .build();
+    }
+}
