@@ -53,11 +53,6 @@ dependencies {
     // 메인 실습(직접 조립형)에는 필요 없다. 확장 과제를 고르지 않으면 이 의존성을 빼도 된다.
     // ===============================
     implementation 'org.springframework.ai:spring-ai-vector-store-advisor'
-
-    // Day 3 Step 4~6: Advisor 계측 / Actuator
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.aspectj:aspectjweaver'
-    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 }
 
 tasks.named('test') {

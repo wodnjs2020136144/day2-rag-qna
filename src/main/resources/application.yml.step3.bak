@@ -26,10 +26,3 @@ springdoc:
 logging:
   level:
     com.skala: DEBUG
-
-# Day 3 - Advisor / Observability
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
